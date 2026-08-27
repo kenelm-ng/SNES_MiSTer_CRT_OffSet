@@ -201,7 +201,7 @@ parameter CONF_STR = {
 	"D1P3OI,SuperFX Speed,Normal,Turbo;",
 	"D1P3oE,SuperFX FastROM,Yes,No;",
 	"D3P3O4,CPU Speed,Normal,Turbo;",
-	"P3OU,Audio clock,Typical,Real;",
+	"P3OU,Audio Clock,Typical,Real;",
 	"P3OV,Sufami Cart swapping,No,Yes;",
 	"P3oMP,Competition Cart time,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18;",
 	"P3-;",
@@ -530,6 +530,7 @@ main main
 	.VBLANKn(VBlank_out),
 	.HSYNC(HSYNC_out),
 	.VSYNC(VSYNC_out),
+	.HVCNT_ATZERO(HVCNT_ATZERO),
 
 	.JOY1_DI(JOY1_DI),
 	.JOY2_DI(GUN_MODE ? LG_DO : JOY2_DI),
@@ -579,6 +580,8 @@ main main
 	.MSU_AUDIO_PLAYING(msu_audio_playing),
 	.MSU_AUDIO_SECTOR(msu_audio_sector),
 	.MSU_RESUME_SECTOR(msu_resume_sector),
+	.MSU_AUDIO_LOOP_INDEX(msu_audio_loop_index),
+	.MSU_RESUME_LOOP_INDEX(msu_resume_loop_index),
 	.MSU_DATA_ADDR(msu_data_addr),
 	.MSU_DATA(msu_data),
 	.MSU_DATA_ACK(msu_data_ack),
@@ -607,15 +610,23 @@ main main
 assign AUDIO_L = audio_l;
 assign AUDIO_R = audio_r;
 
+wire HVCNT_ATZERO;
+
 reg RESET_N = 0;
 reg RESET_REFRESH = 0;
 always @(posedge clk_sys) begin
 	reg [1:0] div;
-	
+
 	div <= div + 1'd1;
 	RESET_REFRESH <= !div;
-	
-	if (div == 2) RESET_N <= ~reset;
+
+	// HV counters keep running during reset for stable video with vsync_adjust=2
+	// Release the reset when HV counters are at zero
+
+	if (reset) begin
+		if (div == 2) RESET_N <= 0;
+	end
+	else if (HVCNT_ATZERO) RESET_N <= 1;
 end
 
 ////////////////////////////  CODES  ///////////////////////////////////
@@ -1319,6 +1330,8 @@ wire        msu_audio_req;
 wire        msu_audio_seek;
 wire [21:0] msu_audio_sector;
 wire [21:0] msu_resume_sector;
+wire [31:0] msu_audio_loop_index;
+wire [31:0] msu_resume_loop_index;
 
 wire [15:0] msu_l;
 wire [15:0] msu_r;
@@ -1337,7 +1350,7 @@ msu_audio msu_audio
 	.ctl_repeat(msu_audio_repeat),
 
 	.track_size(msu_audio_size),
-	.track_processing(msu_track_missing | msu_track_mounting | msu_track_request),
+	.track_processing(msu_track_request),
 
 	.audio_download(msu_audio_download),
 	.audio_data(ioctl_dout),
@@ -1348,6 +1361,8 @@ msu_audio msu_audio
 	.audio_req(msu_audio_req),
 	.audio_seek(msu_audio_seek),
 	.resume_sector(msu_resume_sector),
+	.audio_loop_index(msu_audio_loop_index),
+	.resume_loop_index(msu_resume_loop_index),
 
 	.audio_l(msu_l),
 	.audio_r(msu_r)

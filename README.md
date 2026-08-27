@@ -1,5 +1,7 @@
 # [Super Nintendo Entertainment System](https://en.wikipedia.org/wiki/Super_Nintendo_Entertainment_System) for [MiSTer Platform](https://github.com/MiSTer-devel/Main_MiSTer/wiki)
 
+> **Note:** This is a fork that supports **CRT offset** — allowing you to adjust the horizontal and vertical position of the image on a CRT TV directly from the OSD.
+
 Written by [srg320](https://github.com/srg320)
 
 ## Features
